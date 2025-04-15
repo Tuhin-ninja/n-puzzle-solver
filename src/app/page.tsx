@@ -208,7 +208,7 @@ export default function Home() {
     <main className="min-h-screen p-8 bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-5xl font-bold text-center mb-12 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
-          Tuhin's N-Puzzle Solver
+          Tuhins N-Puzzle Solver
         </h1>
         
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
