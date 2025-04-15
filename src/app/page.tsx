@@ -24,7 +24,7 @@ export default function Home() {
   });
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
   const [customInput, setCustomInput] = useState<string>('');
-  const [isSolvable, setIsSolvable] = useState<boolean>(true);
+  // const [isSolvable, setIsSolvable] = useState<boolean>(true);
   const [showSolvabilityInfo, setShowSolvabilityInfo] = useState<boolean>(false);
 
   useEffect(() => {
@@ -32,7 +32,7 @@ export default function Home() {
   }, [size]);
 
   const initializePuzzle = () => {
-    const solver = new PuzzleSolver(size);
+    // const solver = new PuzzleSolver(size);
     const state: PuzzleState = [];
     const numbers = Array.from({ length: size * size }, (_, i) => i);
     
@@ -58,7 +58,7 @@ export default function Home() {
   const checkSolvability = (state: PuzzleState) => {
     const solver = new PuzzleSolver(size);
     const solvable = solver.isSolvable(state);
-    setIsSolvable(solvable);
+    // setIsSolvable(solvable);
     return solvable;
   };
 
