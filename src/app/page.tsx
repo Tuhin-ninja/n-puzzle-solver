@@ -24,10 +24,8 @@ export default function Home() {
     maxDepth: 0,
   });
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
-  // const [customInput, setCustomInput] = useState<string[][]>([]);
   const [gridInput, setGridInput] = useState<string[][]>([]);
   const [error, setError] = useState<string | null>(null);
-  // const [isSolvable, setIsSolvable] = useState<boolean>(true);
   const [showSolvabilityInfo, setShowSolvabilityInfo] = useState<boolean>(false);
 
   useEffect(() => {
