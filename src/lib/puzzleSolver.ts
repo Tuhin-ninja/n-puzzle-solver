@@ -111,7 +111,6 @@ export class PuzzleSolver {
       conflicts += rowConflicts;
     }
 
-    // Check columns for conflicts
     for (let j = 0; j < this.size; j++) {
       const col = state.map(row => row[j]);
       const goalCol = goalState.map(row => row[j]);
