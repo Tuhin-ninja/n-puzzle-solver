@@ -135,8 +135,6 @@ export class PuzzleSolver {
         const goalTileRow = Math.floor(goalTile / size);
         
         if (tileRow === goalTileRow) {
-          const tileCol = tile % size;
-          const goalTileCol = goalTile % size;
           const tileRow = Math.floor(tile / size);
           const goalTileRow = Math.floor(goalTile / size);
           
