@@ -1,6 +1,7 @@
 export type PuzzleState = number[][];
 
 export type Algorithm = 'bfs' | 'dfs' | 'astar';
+export type Heuristic = 'hamming' | 'linearConflicts' | 'euclidean' | 'manhattan';
 
 export interface PuzzleNode {
   state: PuzzleState;

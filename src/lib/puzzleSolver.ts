@@ -1,4 +1,4 @@
-import { PuzzleState, Algorithm, PuzzleNode, Solution } from '../types/puzzle';
+import { PuzzleState, Algorithm, PuzzleNode, Solution, Heuristic } from '../types/puzzle';
 
 export class PuzzleSolver {
   private size: number;
@@ -18,6 +18,7 @@ export class PuzzleSolver {
       }
     }
     state[this.size - 1][this.size - 1] = 0;
+    console.log(state);
     return state;
   }
 
@@ -80,16 +81,119 @@ export class PuzzleSolver {
         }
       }
     }
+    console.log(`manhattan distance : ${distance}`);
     return distance;
   }
 
-  private createNode(state: PuzzleState, parent: PuzzleNode | null, action: string): PuzzleNode {
+  private hammingDistance(state: PuzzleState): number {
+    let distance = 0;
+    for (let i = 0; i < this.size; i++) {
+      for (let j = 0; j < this.size; j++) {
+        if (state[i][j] !== this.goalState[i][j]) { 
+          distance++;
+        }
+      }
+    }
+    console.log(`hamming distance : ${distance}`);
+    return distance;
+  }
+
+
+  private linearConflicts(state: PuzzleState): number {
+    let conflicts = 0;
+    const goalState = this.generateGoalState();
+
+    // Check rows for conflicts
+    for (let i = 0; i < this.size; i++) {
+      const row = state[i];
+      const goalRow = goalState[i];
+      const rowConflicts = this.countLinearConflicts(row, goalRow);
+      conflicts += rowConflicts;
+    }
+
+    // Check columns for conflicts
+    for (let j = 0; j < this.size; j++) {
+      const col = state.map(row => row[j]);
+      const goalCol = goalState.map(row => row[j]);
+      const colConflicts = this.countLinearConflicts(col, goalCol);
+      conflicts += colConflicts;
+    }
+    console.log(`linear conflicts : ${conflicts}`);
+    return conflicts;
+  }
+
+  private countLinearConflicts(tiles: number[], goalTiles: number[]): number {
+    let conflicts = 0;
+    const size = tiles.length;
+    
+    for (let i = 0; i < size; i++) {
+      const tile = tiles[i];
+      const goalTile = goalTiles[i];
+      
+      if (tile !== 0 && goalTile !== 0) {
+        const tileRow = Math.floor(tile / size);
+        const goalTileRow = Math.floor(goalTile / size);
+        
+        if (tileRow === goalTileRow) {
+          const tileCol = tile % size;
+          const goalTileCol = goalTile % size;
+          const tileRow = Math.floor(tile / size);
+          const goalTileRow = Math.floor(goalTile / size);
+          
+          if (tileRow === goalTileRow) {
+            const tileCol = tile % size;
+            const goalTileCol = goalTile % size;
+            
+            if (tileCol < goalTileCol && goalTileCol < size - 1) {
+              conflicts++;
+            }
+          }
+        }
+      }
+    }
+    return conflicts;
+  }
+
+  private euclideanDistance(state: PuzzleState): number {
+    let distance = 0;
+    for (let i = 0; i < this.size; i++) {
+      for (let j = 0; j < this.size; j++) {
+        const value = state[i][j];
+        if (value !== 0) {
+          const goalRow = Math.floor((value - 1) / this.size);
+          const goalCol = (value - 1) % this.size;
+          distance += Math.sqrt(Math.pow(i - goalRow, 2) + Math.pow(j - goalCol, 2));
+        }
+      }
+    }
+    return distance;
+  }
+
+
+  private getHeuristic(heuristic: Heuristic, state : PuzzleState) : number {
+    switch (heuristic) {
+      case 'hamming':
+        return this.hammingDistance(state);
+      case 'linearConflicts':
+        return this.linearConflicts(state);
+      case 'euclidean':
+        return this.euclideanDistance(state);
+      case 'manhattan':
+        return this.manhattanDistance(state);
+      default:
+        throw new Error(`Unknown heuristic: ${heuristic}`);
+    }
+  }
+
+
+
+  private createNode(state: PuzzleState, parent: PuzzleNode | null, action: string, heuristic: Heuristic): PuzzleNode {
     return {
       state,
       action,
       parent,
       depth: parent ? parent.depth + 1 : 0,
-      cost: this.manhattanDistance(state)
+      cost: this.getHeuristic(heuristic, state)
     };
   }
 
@@ -137,12 +241,12 @@ export class PuzzleSolver {
     }
   }
 
-  solve(initialState: PuzzleState, algorithm: Algorithm): Solution {
+  solve(initialState: PuzzleState, algorithm: Algorithm, heuristic: Heuristic): Solution {
     const startTime = performance.now();
     let nodesExplored = 0;
     let maxDepth = 0;
 
-    const initialNode = this.createNode(initialState, null, '');
+    const initialNode = this.createNode(initialState, null, '', heuristic);
     const visited = new Set<string>();
 
     if (algorithm === 'bfs') {
@@ -171,7 +275,7 @@ export class PuzzleSolver {
           const moveStr = JSON.stringify(move);
           if (!visited.has(moveStr)) {
             const action = this.getAction(node.state, move);
-            queue.push(this.createNode(move, node, action));
+            queue.push(this.createNode(move, node, action, heuristic));
           }
         }
       }
@@ -201,14 +305,14 @@ export class PuzzleSolver {
           const moveStr = JSON.stringify(move);
           if (!visited.has(moveStr)) {
             const action = this.getAction(node.state, move);
-            stack.push(this.createNode(move, node, action));
+            stack.push(this.createNode(move, node, action, heuristic));
           }
         }
       }
     } else if (algorithm === 'astar') {
       const openSet: PuzzleNode[] = [initialNode];
       const fScore = new Map<string, number>();
-      fScore.set(JSON.stringify(initialState), this.manhattanDistance(initialState));
+      fScore.set(JSON.stringify(initialState), this.getHeuristic(heuristic, initialState));
 
       while (openSet.length > 0) {
         openSet.sort((a, b) => (fScore.get(JSON.stringify(a.state)) || 0) - (fScore.get(JSON.stringify(b.state)) || 0));
@@ -234,8 +338,8 @@ export class PuzzleSolver {
           const moveStr = JSON.stringify(move);
           if (!visited.has(moveStr)) {
             const action = this.getAction(node.state, move);
-            const newNode = this.createNode(move, node, action);
-            const newFScore = newNode.depth + this.manhattanDistance(move);
+            const newNode = this.createNode(move, node, action, heuristic);
+            const newFScore = newNode.depth + this.getHeuristic(heuristic, move);
             fScore.set(moveStr, newFScore);
             openSet.push(newNode);
           }

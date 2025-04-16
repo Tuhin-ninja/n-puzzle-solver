@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { PuzzleSolver } from '../lib/puzzleSolver';
-import { PuzzleState, Algorithm, Solution } from '../types/puzzle';
+import { PuzzleState, Algorithm, Solution, Heuristic } from '../types/puzzle';
 
 export default function Home() {
   const [size, setSize] = useState<number>(3);
@@ -10,6 +10,7 @@ export default function Home() {
   const [currentState, setCurrentState] = useState<PuzzleState>([]);
   const [solution, setSolution] = useState<Solution | null>(null);
   const [selectedAlgorithm, setSelectedAlgorithm] = useState<Algorithm>('astar');
+  const [selectedHeuristic, setSelectedHeuristic] = useState<Heuristic>('manhattan');
   const [isSolving, setIsSolving] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -23,13 +24,22 @@ export default function Home() {
     maxDepth: 0,
   });
   const [showCustomInput, setShowCustomInput] = useState<boolean>(false);
-  const [customInput, setCustomInput] = useState<string>('');
+  const [customInput, setCustomInput] = useState<string[][]>([]);
+  const [gridInput, setGridInput] = useState<string[][]>([]);
+  const [error, setError] = useState<string | null>(null);
   // const [isSolvable, setIsSolvable] = useState<boolean>(true);
   const [showSolvabilityInfo, setShowSolvabilityInfo] = useState<boolean>(false);
 
   useEffect(() => {
     initializePuzzle();
   }, [size]);
+
+  useEffect(() => {
+    if (showCustomInput) {
+      const emptyGrid = Array(size).fill('').map(() => Array(size).fill(''));
+      setGridInput(emptyGrid);
+    }
+  }, [showCustomInput, size]);
 
   const initializePuzzle = () => {
     // const solver = new PuzzleSolver(size);
@@ -71,7 +81,7 @@ export default function Home() {
     setIsSolving(true);
     const solver = new PuzzleSolver(size);
     try {
-      const result = solver.solve(currentState, selectedAlgorithm);
+      const result = solver.solve(currentState, selectedAlgorithm, selectedHeuristic);
       setSolution(result);
       setStats({
         nodesExplored: result.nodesExplored,
@@ -84,6 +94,13 @@ export default function Home() {
     }
     setIsSolving(false);
   };
+
+  const handleHeuristicChange = (heuristic: Heuristic) => {
+    console.log(heuristic);
+    setSelectedHeuristic(heuristic);
+  };
+
+
 
   const handleTileClick = (row: number, col: number) => {
     if (isSolving) return;
@@ -168,39 +185,54 @@ export default function Home() {
     return () => clearInterval(interval);
   }, [isPlaying, currentStep, solution]);
 
+  const handleGridInputChange = (row: number, col: number, value: string) => {
+    const newGrid = [...gridInput];
+    newGrid[row][col] = value;
+    setGridInput(newGrid);
+  };
+
   const handleCustomInput = () => {
     try {
-      const numbers = customInput.split(',').map(num => parseInt(num.trim()));
-      if (numbers.length !== size * size) {
-        throw new Error(`Please enter exactly ${size * size} numbers`);
-      }
-      if (numbers.some(num => isNaN(num) || num < 0 || num >= size * size)) {
-        throw new Error(`Please enter numbers between 0 and ${size * size - 1}`);
-      }
-      if (new Set(numbers).size !== numbers.length) {
-        throw new Error('Please enter unique numbers');
-      }
-
-      const state: PuzzleState = [];
+      // Convert grid input to numbers
+      const numbers: number[] = [];
       for (let i = 0; i < size; i++) {
-        state[i] = [];
         for (let j = 0; j < size; j++) {
-          state[i][j] = numbers[i * size + j];
+          const value = gridInput[i][j];
+          if (value === '') {
+            throw new Error('Please fill all cells');
+          }
+          const num = parseInt(value);
+          if (isNaN(num) || num < 0 || num >= size * size) {
+            throw new Error(`Please enter numbers between 0 and ${size * size - 1}`);
+          }
+          numbers.push(num);
         }
       }
 
-      if (!checkSolvability(state)) {
-        setShowSolvabilityInfo(true);
-        return;
+      // Validate the input
+      const uniqueNumbers = new Set(numbers);
+      if (uniqueNumbers.size !== size * size) {
+        throw new Error('Please enter unique numbers');
       }
 
-      setInitialState(state);
-      setCurrentState(state);
+      // Convert to 2D array
+      const newPuzzle: number[][] = [];
+      for (let i = 0; i < size; i++) {
+        newPuzzle.push(numbers.slice(i * size, (i + 1) * size));
+      }
+
+      setInitialState(newPuzzle);
+      setCurrentState(newPuzzle);
       setSolution(null);
       setStats({ nodesExplored: 0, timeTaken: 0, maxDepth: 0 });
       setShowCustomInput(false);
+      setGridInput([]);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Invalid input');
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError('An unknown error occurred');
+      }
     }
   };
 
@@ -227,7 +259,7 @@ export default function Home() {
                       <button
                         key={s}
                         onClick={() => handleSizeChange(s)}
-                        className={`flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-all duration-200 ${
+                        className={`flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-all duration-1000 ${
                           size === s
                             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/20'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -248,7 +280,7 @@ export default function Home() {
                       <button
                         key={algo}
                         onClick={() => handleAlgorithmChange(algo)}
-                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-1000 ${
                           selectedAlgorithm === algo
                             ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/20'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -260,23 +292,44 @@ export default function Home() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Heuristic
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(['hamming', 'linearConflicts', 'euclidean', 'manhattan'] as Heuristic[]).map((heuristic) => (
+                      <button
+                        key={heuristic}
+                        onClick={() => handleHeuristicChange(heuristic)}
+                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-1000 ${
+                          selectedHeuristic === heuristic
+                            ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/20'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        {heuristic.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="flex space-x-4 pt-4">
                   <button
                     onClick={initializePuzzle}
-                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
+                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-1000"
                   >
                     New Puzzle
                   </button>
                   <button
                     onClick={() => setShowCustomInput(true)}
-                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
+                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-1000"
                   >
                     Custom Input
                   </button>
                   <button
                     onClick={handleSolve}
                     disabled={isSolving}
-                    className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
+                    className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-1000 ${
                       isSolving
                         ? 'bg-gray-300 cursor-not-allowed'
                         : 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg shadow-green-500/20 hover:from-green-700 hover:to-green-800'
@@ -322,7 +375,7 @@ export default function Home() {
                   <button
                     key={`${i}-${j}`}
                     onClick={() => handleTileClick(i, j)}
-                    className={`aspect-square flex items-center justify-center text-3xl font-bold rounded-xl transition-all duration-200
+                    className={`aspect-square flex items-center justify-center text-3xl font-bold rounded-xl transition-all duration-1000
                       ${value === 0 
                         ? 'bg-gray-200' 
                         : 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-800 hover:from-blue-200 hover:to-blue-100 shadow-sm'
@@ -346,7 +399,7 @@ export default function Home() {
               {solution.path.map((move, index) => (
                 <span
                   key={index}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 ${
+                  className={`px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all duration-1000 ${
                     index === currentStep
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/20'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -361,25 +414,25 @@ export default function Home() {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => handleStepChange(0)}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-1000"
               >
                 Reset
               </button>
               <button
                 onClick={() => handleStepChange(Math.max(0, currentStep - 1))}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-1000"
               >
                 Previous
               </button>
               <button
                 onClick={handlePlayPause}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-medium shadow-lg shadow-purple-500/20 hover:from-purple-700 hover:to-purple-800 transition-all duration-200"
+                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-xl font-medium shadow-lg shadow-purple-500/20 hover:from-purple-700 hover:to-purple-800 transition-all duration-1000"
               >
                 {isPlaying ? 'Pause' : 'Play'}
               </button>
               <button
                 onClick={() => handleStepChange(Math.min(solution.path.length, currentStep + 1))}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200"
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-1000"
               >
                 Next
               </button>
@@ -393,14 +446,14 @@ export default function Home() {
         {/* Custom Input Modal */}
         {showCustomInput && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-100 transform transition-all duration-300 scale-100">
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100 transform transition-all duration-1000 scale-100">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
                   Custom Puzzle Input
                 </h2>
                 <button
                   onClick={() => setShowCustomInput(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  className="text-gray-400 hover:text-gray-600 transition-colors duration-1000"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -414,11 +467,7 @@ export default function Home() {
                   <ul className="text-sm text-blue-700 space-y-1">
                     <li className="flex items-start">
                       <span className="text-blue-500 mr-2">•</span>
-                      Enter {size * size} numbers separated by commas
-                    </li>
-                    <li className="flex items-start">
-                      <span className="text-blue-500 mr-2">•</span>
-                      Numbers should be from 0 to {size * size - 1}
+                      Fill in all cells with numbers from 0 to {size * size - 1}
                     </li>
                     <li className="flex items-start">
                       <span className="text-blue-500 mr-2">•</span>
@@ -431,28 +480,38 @@ export default function Home() {
                   </ul>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Puzzle Configuration
-                  </label>
-                  <div className="relative">
-                    <textarea
-                      value={customInput}
-                      onChange={(e) => setCustomInput(e.target.value)}
-                      placeholder={`Example: 1,2,3,4,5,6,7,8,0`}
-                      className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm transition-all duration-200"
-                      rows={3}
-                    />
-                    <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-                      {customInput.split(',').filter(n => n.trim() !== '').length} / {size * size} numbers
-                    </div>
+                {error && (
+                  <div className="bg-red-50/50 p-4 rounded-xl border border-red-100">
+                    <p className="text-sm font-medium text-red-800">{error}</p>
+                  </div>
+                )}
+
+                <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                  <div className="grid gap-2" style={{ 
+                    gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+                    aspectRatio: '1/1'
+                  }}>
+                    {gridInput.map((row, i) =>
+                      row.map((value, j) => (
+                        <input
+                          key={`${i}-${j}`}
+                          type="number"
+                          min="0"
+                          max={size * size - 1}
+                          value={value.toString()}
+                          onChange={(e) => handleGridInputChange(i, j, e.target.value)}
+                          className="aspect-square w-full text-center text-xl font-bold text-blue-500 rounded-lg border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-1000 bg-white/80 backdrop-blur-sm"
+                          placeholder="0"
+                        />
+                      ))
+                    )}
                   </div>
                 </div>
 
                 <div className="flex space-x-4 pt-2">
                   <button
                     onClick={() => setShowCustomInput(false)}
-                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200 flex items-center justify-center"
+                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-1000 flex items-center justify-center"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -461,7 +520,7 @@ export default function Home() {
                   </button>
                   <button
                     onClick={handleCustomInput}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-blue-800 transition-all duration-1000 flex items-center justify-center"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -477,14 +536,14 @@ export default function Home() {
         {/* Solvability Info Modal */}
         {showSolvabilityInfo && (
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 max-w-md w-full shadow-2xl border border-gray-100 transform transition-all duration-300 scale-100">
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100 transform transition-all duration-1000 scale-100">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-orange-600">
                   Configuration Not Solvable
                 </h2>
                 <button
                   onClick={() => setShowSolvabilityInfo(false)}
-                  className="text-gray-400 hover:text-gray-600 transition-colors duration-200"
+                  className="text-gray-400 hover:text-gray-600 transition-colors duration-1000"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -517,7 +576,7 @@ export default function Home() {
                       setShowSolvabilityInfo(false);
                       setShowCustomInput(false);
                     }}
-                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-200 flex items-center justify-center"
+                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-1000 flex items-center justify-center"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -529,7 +588,7 @@ export default function Home() {
                       setShowSolvabilityInfo(false);
                       initializePuzzle();
                     }}
-                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-blue-800 transition-all duration-200 flex items-center justify-center"
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-medium shadow-lg shadow-blue-500/20 hover:from-blue-700 hover:to-blue-800 transition-all duration-1000 flex items-center justify-center"
                   >
                     <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
