@@ -61,7 +61,7 @@ export class PuzzleSolver {
       if (newRow >= 0 && newRow < this.size && newCol >= 0 && newCol < this.size) {
         const newState = state.map(row => [...row]);
         [newState[blankRow][blankCol], newState[newRow][newCol]] = 
-          [newState[newRow][newCol], newState[blankRow][blankCol]];
+          [newState[newRow][newCol], newState[blankRow][blankCol]]; // swap operation occuring 
         moves.push(newState);
       }
     }
@@ -306,13 +306,14 @@ export class PuzzleSolver {
           }
         }
       }
-    } else if (algorithm === 'astar') {
-      const openSet: PuzzleNode[] = [initialNode];
+    } 
+    else if (algorithm === 'astar') {
+      const openSet: PuzzleNode[] = [initialNode]; // list of puzzleNode to explore 
       const fScore = new Map<string, number>();
       fScore.set(JSON.stringify(initialState), this.getHeuristic(heuristic, initialState));
 
       while (openSet.length > 0) {
-        openSet.sort((a, b) => (fScore.get(JSON.stringify(a.state)) || 0) - (fScore.get(JSON.stringify(b.state)) || 0));
+        openSet.sort((a, b) => (fScore.get(JSON.stringify(a.state)) || 0) - (fScore.get(JSON.stringify(b.state)) || 0)); // sort the state in ascending order 
         const node = openSet.shift()!;
         nodesExplored++;
         maxDepth = Math.max(maxDepth, node.depth);

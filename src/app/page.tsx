@@ -14,6 +14,7 @@ export default function Home() {
   const [isSolving, setIsSolving] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [showCustomSize, setShowCustomSize] = useState<boolean>(false); 
   const [stats, setStats] = useState<{
     nodesExplored: number;
     timeTaken: number;
@@ -129,6 +130,7 @@ export default function Home() {
     }
     return null;
   };
+
 
   const handleSizeChange = (newSize: number) => {
     setSize(newSize);
@@ -266,6 +268,11 @@ export default function Home() {
                         {s}x{s}
                       </button>
                     ))}
+                    <button className='flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-all duration-1000 bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    onClick={()=> setShowCustomSize(!showCustomSize)}
+                    >
+                      Custom
+                      </button>
                   </div>
                 </div>
 
@@ -592,6 +599,79 @@ export default function Home() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     New Puzzle
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Custom Size Modal */}
+        {showCustomSize && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl p-6 max-w-md w-full shadow-2xl border border-gray-100 transform transition-all duration-300 scale-100">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-green-600 to-blue-600">
+                  Custom Puzzle Size
+                </h2>
+                <button
+                  onClick={() => setShowCustomSize(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors duration-300"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="bg-green-50/50 p-4 rounded-xl border border-green-100">
+                  <h3 className="text-sm font-medium text-green-800 mb-2">Instructions</h3>
+                  <ul className="text-sm text-green-700 space-y-1">
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">•</span>
+                      Enter a size between 3 and 8
+                    </li>
+                    <li className="flex items-start">
+                      <span className="text-green-500 mr-2">•</span>
+                      Larger sizes may take longer to solve
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
+                  <input
+                    type="number"
+                    min="3"
+                    max="8"
+                    value={size}
+                    onChange={(e) => handleSizeChange(parseInt(e.target.value))}
+                    className="w-full px-4 py-3 text-center text-xl font-bold text-green-600 rounded-xl border-2 border-gray-200 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-300"
+                    placeholder="Enter size (3-8)"
+                  />
+                </div>
+
+                <div className="flex space-x-4 pt-2">
+                  <button
+                    onClick={() => setShowCustomSize(false)}
+                    className="flex-1 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-all duration-300 flex items-center justify-center"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowCustomSize(false);
+                      initializePuzzle();
+                    }}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-xl font-medium shadow-lg shadow-green-500/20 hover:from-green-700 hover:to-green-800 transition-all duration-300 flex items-center justify-center"
+                  >
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Apply
                   </button>
                 </div>
               </div>
