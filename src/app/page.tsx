@@ -360,7 +360,7 @@ export default function Home() {
                     <p className="text-2xl font-bold text-purple-600">{stats.timeTaken.toFixed(2)}ms</p>
                   </div>
                   <div className="bg-green-50 p-4 rounded-xl">
-                    <p className="text-sm text-gray-600">Max Depth</p>
+                    <p className="text-sm text-gray-600">Minimum Moves</p>
                     <p className="text-2xl font-bold text-green-600">{stats.maxDepth}</p>
                   </div>
                 </div>
