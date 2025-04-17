@@ -104,8 +104,8 @@ export class PuzzleSolver {
     const dist = this.manhattanDistance(state); 
     let linear_conflicts = 0; 
     for(let i=0; i<this.size ; i++){ 
-      let row = state[i]; 
-      let col = state.map(r => r[i]); 
+      const row = state[i]; 
+      const col = state.map(r => r[i]); 
       for(let j=0; j<this.size; j++){
         for(let k=j+1; k<this.size; k++){
           if(row[j] == 0 || row[k] == 0 || col[j] == 0 || col[k] == 0) continue; 
