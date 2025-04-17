@@ -70,78 +70,96 @@ export class PuzzleSolver {
   }
 
   private manhattanDistance(state: PuzzleState): number {
-    // in this case the blank tile is included 
-    let dist = 0; 
-    for (let i=0; i<this.size; i++){
-      for(let j=0;j<this.size;j++){
-        if(state[i][j] === 0 ){
-          dist += 2*this.size - i - j - 2; 
-          continue; 
-        }
-        const actual_row = (state[i][j]-1)/this.size; 
-        const actual_col = (state[i][j]-1) % this.size; 
-        dist += Math.abs(actual_row-i) + Math.abs(actual_col-j); 
+    let dist = 0;
+    for (let i = 0; i < this.size; i++) {
+      for (let j = 0; j < this.size; j++) {
+        const value = state[i][j];
+        if (value === 0) continue; // Skip blank tile
+        const goalRow = Math.floor((value - 1) / this.size);
+        const goalCol = (value - 1) % this.size;
+        dist += Math.abs(i - goalRow) + Math.abs(j - goalCol);
       }
     }
-    return dist; 
+    return dist;
   }
 
   private hammingDistance(state: PuzzleState): number {
-    // the blannk tile is not included 
-    let dist = 0
-    for(let i=0; i<this.size; i++){
-      for(let j=0; j<this.size; j++){
-        if(state[i][j] == 0) continue; 
-        if(this.goalState[i][j] != state[i][j]) dist++;
+    let dist = 0;
+    for (let i = 0; i < this.size; i++) {
+      for (let j = 0; j < this.size; j++) {
+        const value = state[i][j];
+        if (value === 0) continue; // Skip blank tile
+        const goalRow = Math.floor((value - 1) / this.size);
+        const goalCol = (value - 1) % this.size;
+        if (i !== goalRow || j !== goalCol) {
+          dist++;
+        }
       }
     }
-
-    return dist; 
+    return dist;
   }
-
 
   private linearConflicts(state: PuzzleState): number {
-    const dist = this.manhattanDistance(state); 
-    let linear_conflicts = 0; 
-    for(let i=0; i<this.size ; i++){ 
-      const row = state[i]; 
-      const col = state.map(r => r[i]); 
-      for(let j=0; j<this.size; j++){
-        for(let k=j+1; k<this.size; k++){
-          if(row[j] == 0 || row[k] == 0 || col[j] == 0 || col[k] == 0) continue; 
-          if(Math.floor((row[j]-1)/this.size) == i && Math.floor((row[k]-1)/this.size) == i && row[j]>row[k]){
-            linear_conflicts++; 
-          }
-          if((col[j]-1) % this.size == i && (col[k]-1) % this.size == i && col[j]>col[k]){
-            linear_conflicts++; 
+    const dist = this.manhattanDistance(state);
+    let linear_conflicts = 0;
+    
+    // Check row conflicts
+    for (let i = 0; i < this.size; i++) {
+      for (let j = 0; j < this.size - 1; j++) {
+        const value1 = state[i][j];
+        if (value1 === 0) continue;
+        const goalRow1 = Math.floor((value1 - 1) / this.size);
+        if (goalRow1 !== i) continue;
+        
+        for (let k = j + 1; k < this.size; k++) {
+          const value2 = state[i][k];
+          if (value2 === 0) continue;
+          const goalRow2 = Math.floor((value2 - 1) / this.size);
+          if (goalRow2 === i && value1 > value2) {
+            linear_conflicts++;
           }
         }
       }
     }
-
-    return dist + 2*linear_conflicts; 
-  }
-
-
-
-
-  private euclideanDistance(state: PuzzleState): number {
-    // blank tile is included in this case 
-      let dist = 0; 
-      for (let i=0; i<this.size; i++){
-        for(let j=0;j<this.size;j++){
-          if(state[i][j] === 0 ){
-            dist += Math.sqrt(Math.pow(this.size-i-1,2) + Math.pow(this.size-j-1,2)); 
-            continue; 
+    
+    // Check column conflicts
+    for (let j = 0; j < this.size; j++) {
+      for (let i = 0; i < this.size - 1; i++) {
+        const value1 = state[i][j];
+        if (value1 === 0) continue;
+        const goalCol1 = (value1 - 1) % this.size;
+        if (goalCol1 !== j) continue;
+        
+        for (let k = i + 1; k < this.size; k++) {
+          const value2 = state[k][j];
+          if (value2 === 0) continue;
+          const goalCol2 = (value2 - 1) % this.size;
+          if (goalCol2 === j && value1 > value2) {
+            linear_conflicts++;
           }
-          const actual_row = (state[i][j]-1)/this.size; 
-          const actual_col = (state[i][j]-1) % this.size; 
-          dist += Math.sqrt(Math.pow(actual_row-i,2) + Math.pow(actual_col-j,2));
         }
       }
-      return dist; 
-}
+    }
+    
+    return dist + 2 * linear_conflicts;
+  }
 
+  private euclideanDistance(state: PuzzleState): number {
+    let dist = 0;
+    for (let i = 0; i < this.size; i++) {
+      for (let j = 0; j < this.size; j++) {
+        const value = state[i][j];
+        if (value === 0) {
+          dist += Math.sqrt(Math.pow(this.size-i-1,2) + Math.pow(this.size-j-1,2));
+          continue; 
+        }; // Skip blank tile
+        const goalRow = Math.floor((value - 1) / this.size);
+        const goalCol = (value - 1) % this.size;
+        dist += Math.sqrt(Math.pow(i - goalRow, 2) + Math.pow(j - goalCol, 2));
+      }
+    }
+    return dist;
+  }
 
   private getHeuristic(heuristic: Heuristic, state : PuzzleState) : number {
     switch (heuristic) {
@@ -158,15 +176,14 @@ export class PuzzleSolver {
     }
   }
 
-
-
   private createNode(state: PuzzleState, parent: PuzzleNode | null, action: string, heuristic: Heuristic): PuzzleNode {
+    const h = this.getHeuristic(heuristic, state);
     return {
       state,
       action,
       parent,
       depth: parent ? parent.depth + 1 : 0,
-      cost: this.getHeuristic(heuristic, state)
+      cost: h
     };
   }
 
@@ -284,12 +301,23 @@ export class PuzzleSolver {
       }
     } 
     else if (algorithm === 'astar') {
-      const openSet: PuzzleNode[] = [initialNode]; // list of puzzleNode to explore 
+      const openSet: PuzzleNode[] = [initialNode];
       const fScore = new Map<string, number>();
+      const gScore = new Map<string, number>();
       fScore.set(JSON.stringify(initialState), this.getHeuristic(heuristic, initialState));
+      gScore.set(JSON.stringify(initialState), 0);
 
       while (openSet.length > 0) {
-        openSet.sort((a, b) => (fScore.get(JSON.stringify(a.state)) || 0) - (fScore.get(JSON.stringify(b.state)) || 0)); // sort the state in ascending order 
+        openSet.sort((a, b) => {
+          const fScoreA = fScore.get(JSON.stringify(a.state)) || 0;
+          const fScoreB = fScore.get(JSON.stringify(b.state)) || 0;
+          if (fScoreA !== fScoreB) return fScoreA - fScoreB;
+          // If fScores are equal, prefer the node with higher gScore (closer to start)
+          const gScoreA = gScore.get(JSON.stringify(a.state)) || 0;
+          const gScoreB = gScore.get(JSON.stringify(b.state)) || 0;
+          return gScoreB - gScoreA;
+        });
+        
         const node = openSet.shift()!;
         nodesExplored++;
         maxDepth = Math.max(maxDepth, node.depth);
@@ -313,9 +341,14 @@ export class PuzzleSolver {
           if (!visited.has(moveStr)) {
             const action = this.getAction(node.state, move);
             const newNode = this.createNode(move, node, action, heuristic);
-            const newFScore = newNode.depth + this.getHeuristic(heuristic, move);
-            fScore.set(moveStr, newFScore);
-            openSet.push(newNode);
+            const tentativeGScore = (gScore.get(stateStr) || 0) + 1;
+            
+            if (!gScore.has(moveStr) || tentativeGScore < (gScore.get(moveStr) || Infinity)) {
+              gScore.set(moveStr, tentativeGScore);
+              const newFScore = tentativeGScore + this.getHeuristic(heuristic, move);
+              fScore.set(moveStr, newFScore);
+              openSet.push(newNode);
+            }
           }
         }
       }
