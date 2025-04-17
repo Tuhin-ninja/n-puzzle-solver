@@ -70,101 +70,77 @@ export class PuzzleSolver {
   }
 
   private manhattanDistance(state: PuzzleState): number {
-    let distance = 0;
-    for (let i = 0; i < this.size; i++) {
-      for (let j = 0; j < this.size; j++) {
-        const value = state[i][j];
-        if (value !== 0) {
-          const goalRow = Math.floor((value - 1) / this.size);
-          const goalCol = (value - 1) % this.size;
-          distance += Math.abs(i - goalRow) + Math.abs(j - goalCol);
+    // in this case the blank tile is included 
+    let dist = 0; 
+    for (let i=0; i<this.size; i++){
+      for(let j=0;j<this.size;j++){
+        if(state[i][j] === 0 ){
+          dist += 2*this.size - i - j - 2; 
+          continue; 
         }
+        const actual_row = (state[i][j]-1)/this.size; 
+        const actual_col = (state[i][j]-1) % this.size; 
+        dist += Math.abs(actual_row-i) + Math.abs(actual_col-j); 
       }
     }
-    console.log(`manhattan distance : ${distance}`);
-    return distance;
+    return dist; 
   }
 
   private hammingDistance(state: PuzzleState): number {
-    let distance = 0;
-    for (let i = 0; i < this.size; i++) {
-      for (let j = 0; j < this.size; j++) {
-        if (state[i][j] !== this.goalState[i][j]) { 
-          distance++;
-        }
+    // the blannk tile is not included 
+    let dist = 0
+    for(let i=0; i<this.size; i++){
+      for(let j=0; j<this.size; j++){
+        if(state[i][j] == 0) continue; 
+        if(this.goalState[i][j] != state[i][j]) dist++;
       }
     }
-    console.log(`hamming distance : ${distance}`);
-    return distance;
+
+    return dist; 
   }
 
 
   private linearConflicts(state: PuzzleState): number {
-    let conflicts = 0;
-    const goalState = this.generateGoalState();
-
-    // Check rows for conflicts
-    for (let i = 0; i < this.size; i++) {
-      const row = state[i];
-      const goalRow = goalState[i];
-      const rowConflicts = this.countLinearConflicts(row, goalRow);
-      conflicts += rowConflicts;
-    }
-
-    for (let j = 0; j < this.size; j++) {
-      const col = state.map(row => row[j]);
-      const goalCol = goalState.map(row => row[j]);
-      const colConflicts = this.countLinearConflicts(col, goalCol);
-      conflicts += colConflicts;
-    }
-    console.log(`linear conflicts : ${conflicts}`);
-    return conflicts;
-  }
-
-  private countLinearConflicts(tiles: number[], goalTiles: number[]): number {
-    let conflicts = 0;
-    const size = tiles.length;
-    
-    for (let i = 0; i < size; i++) {
-      const tile = tiles[i];
-      const goalTile = goalTiles[i];
-      
-      if (tile !== 0 && goalTile !== 0) {
-        const tileRow = Math.floor(tile / size);
-        const goalTileRow = Math.floor(goalTile / size);
-        
-        if (tileRow === goalTileRow) {
-          const tileRow = Math.floor(tile / size);
-          const goalTileRow = Math.floor(goalTile / size);
-          
-          if (tileRow === goalTileRow) {
-            const tileCol = tile % size;
-            const goalTileCol = goalTile % size;
-            
-            if (tileCol < goalTileCol && goalTileCol < size - 1) {
-              conflicts++;
-            }
+    let dist = this.manhattanDistance(state); 
+    let linear_conflicts = 0; 
+    for(let i=0; i<this.size ; i++){ 
+      let row = state[i]; 
+      let col = state.map(r => r[i]); 
+      for(let j=0; j<this.size; j++){
+        for(let k=j+1; k<this.size; k++){
+          if(row[j] == 0 || row[k] == 0 || col[j] == 0 || col[k] == 0) continue; 
+          if(Math.floor((row[j]-1)/this.size) == i && Math.floor((row[k]-1)/this.size) == i && row[j]>row[k]){
+            linear_conflicts++; 
+          }
+          if((col[j]-1) % this.size == i && (col[k]-1) % this.size == i && col[j]>col[k]){
+            linear_conflicts++; 
           }
         }
       }
     }
-    return conflicts;
+
+    return dist + 2*linear_conflicts; 
   }
 
+
+
+
   private euclideanDistance(state: PuzzleState): number {
-    let distance = 0;
-    for (let i = 0; i < this.size; i++) {
-      for (let j = 0; j < this.size; j++) {
-        const value = state[i][j];
-        if (value !== 0) {
-          const goalRow = Math.floor((value - 1) / this.size);
-          const goalCol = (value - 1) % this.size;
-          distance += Math.sqrt(Math.pow(i - goalRow, 2) + Math.pow(j - goalCol, 2));
+    // blank tile is included in this case 
+      let dist = 0; 
+      for (let i=0; i<this.size; i++){
+        for(let j=0;j<this.size;j++){
+          if(state[i][j] === 0 ){
+            dist += Math.sqrt(Math.pow(this.size-i-1,2) + Math.pow(this.size-j-1,2)); 
+            continue; 
+          }
+          const actual_row = (state[i][j]-1)/this.size; 
+          const actual_col = (state[i][j]-1) % this.size; 
+          dist += Math.sqrt(Math.pow(actual_row-i,2) + Math.pow(actual_col-j,2));
         }
       }
-    }
-    return distance;
-  }
+      return dist; 
+}
 
 
   private getHeuristic(heuristic: Heuristic, state : PuzzleState) : number {
