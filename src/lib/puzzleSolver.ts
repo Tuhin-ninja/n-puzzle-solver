@@ -101,7 +101,7 @@ export class PuzzleSolver {
 
 
   private linearConflicts(state: PuzzleState): number {
-    let dist = this.manhattanDistance(state); 
+    const dist = this.manhattanDistance(state); 
     let linear_conflicts = 0; 
     for(let i=0; i<this.size ; i++){ 
       let row = state[i]; 
