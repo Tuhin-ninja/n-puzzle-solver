@@ -74,7 +74,11 @@ export class PuzzleSolver {
     for (let i = 0; i < this.size; i++) {
       for (let j = 0; j < this.size; j++) {
         const value = state[i][j];
-        if (value === 0) continue; // Skip blank tile
+        if (value === 0) {
+          // For blank tile, calculate distance to bottom-right corner
+          dist += Math.abs(i - (this.size - 1)) + Math.abs(j - (this.size - 1));
+          continue;
+        }
         const goalRow = Math.floor((value - 1) / this.size);
         const goalCol = (value - 1) % this.size;
         dist += Math.abs(i - goalRow) + Math.abs(j - goalCol);
@@ -189,10 +193,13 @@ export class PuzzleSolver {
 
   private reconstructPath(node: PuzzleNode): string[] {
     const path: string[] = [];
-    while (node.parent) {
-      path.unshift(node.action);
-      node = node.parent;
+    let current = node;
+    while (current.parent) {
+      path.unshift(current.action);
+      current = current.parent;
     }
+    console.log('Path length:', path.length);
+    console.log('Path:', path);
     return path;
   }
 
@@ -302,6 +309,7 @@ export class PuzzleSolver {
     } 
     else if (algorithm === 'astar') {
       const openSet: PuzzleNode[] = [initialNode];
+      const closedSet = new Set<string>();
       const fScore = new Map<string, number>();
       const gScore = new Map<string, number>();
       fScore.set(JSON.stringify(initialState), this.getHeuristic(heuristic, initialState));
@@ -318,7 +326,7 @@ export class PuzzleSolver {
           return gScoreB - gScoreA;
         });
         
-        const node = openSet.shift()!;
+        const node = openSet.shift()!; // this pops an element from the front of the openset
         nodesExplored++;
         maxDepth = Math.max(maxDepth, node.depth);
 
@@ -332,21 +340,34 @@ export class PuzzleSolver {
         }
 
         const stateStr = JSON.stringify(node.state);
-        if (visited.has(stateStr)) continue;
-        visited.add(stateStr);
+        closedSet.add(stateStr);
 
         const moves = this.getPossibleMoves(node.state);
         for (const move of moves) {
           const moveStr = JSON.stringify(move);
-          if (!visited.has(moveStr)) {
-            const action = this.getAction(node.state, move);
+          if (closedSet.has(moveStr)) continue;
+
+          const action = this.getAction(node.state, move);
+          const tentativeGScore = (gScore.get(stateStr) || 0) + 1;
+          const hScore = this.getHeuristic(heuristic, move);
+          const tentativeFScore = tentativeGScore + hScore;
+          
+          // Only update if we found a better total path (fScore)
+
+          // for example lets say we have a path A->B->C the cost : 10 
+          // later we have found another path A->D->C the cost : 8 
+          // so we update the cost of C and update the parent as well. 
+
+          if (!fScore.has(moveStr) || tentativeFScore < (fScore.get(moveStr) || Infinity)) {
             const newNode = this.createNode(move, node, action, heuristic);
-            const tentativeGScore = (gScore.get(stateStr) || 0) + 1;
+            gScore.set(moveStr, tentativeGScore);
+            fScore.set(moveStr, tentativeFScore);
             
-            if (!gScore.has(moveStr) || tentativeGScore < (gScore.get(moveStr) || Infinity)) {
-              gScore.set(moveStr, tentativeGScore);
-              const newFScore = tentativeGScore + this.getHeuristic(heuristic, move);
-              fScore.set(moveStr, newFScore);
+            // Check if the node is already in openSet
+            const existingNodeIndex = openSet.findIndex(n => JSON.stringify(n.state) === moveStr);
+            if (existingNodeIndex !== -1) {
+              openSet[existingNodeIndex] = newNode;
+            } else {
               openSet.push(newNode);
             }
           }
