@@ -74,11 +74,7 @@ export class PuzzleSolver {
     for (let i = 0; i < this.size; i++) {
       for (let j = 0; j < this.size; j++) {
         const value = state[i][j];
-        if (value === 0) {
-          // For blank tile, calculate distance to bottom-right corner
-          dist += Math.abs(i - (this.size - 1)) + Math.abs(j - (this.size - 1));
-          continue;
-        }
+        if(value == 0) continue;  // skip the blank tile. no need to calculate this one 
         const goalRow = Math.floor((value - 1) / this.size);
         const goalCol = (value - 1) % this.size;
         dist += Math.abs(i - goalRow) + Math.abs(j - goalCol);
@@ -109,17 +105,20 @@ export class PuzzleSolver {
     
     // Check row conflicts
     for (let i = 0; i < this.size; i++) {
-      for (let j = 0; j < this.size - 1; j++) {
-        const value1 = state[i][j];
-        if (value1 === 0) continue;
-        const goalRow1 = Math.floor((value1 - 1) / this.size);
-        if (goalRow1 !== i) continue;
-        
-        for (let k = j + 1; k < this.size; k++) {
-          const value2 = state[i][k];
-          if (value2 === 0) continue;
-          const goalRow2 = Math.floor((value2 - 1) / this.size);
-          if (goalRow2 === i && value1 > value2) {
+      const rowTiles: number[] = [];
+      for (let j = 0; j < this.size; j++) {
+        const value = state[i][j];
+        if (value === 0) continue;
+        const goalRow = Math.floor((value - 1) / this.size);
+        if (goalRow === i) {
+          rowTiles.push(value);
+        }
+      }
+      
+      // Count conflicts in this row
+      for (let j = 0; j < rowTiles.length - 1; j++) {
+        for (let k = j + 1; k < rowTiles.length; k++) {
+          if (rowTiles[j] > rowTiles[k]) {
             linear_conflicts++;
           }
         }
@@ -128,17 +127,20 @@ export class PuzzleSolver {
     
     // Check column conflicts
     for (let j = 0; j < this.size; j++) {
-      for (let i = 0; i < this.size - 1; i++) {
-        const value1 = state[i][j];
-        if (value1 === 0) continue;
-        const goalCol1 = (value1 - 1) % this.size;
-        if (goalCol1 !== j) continue;
-        
-        for (let k = i + 1; k < this.size; k++) {
-          const value2 = state[k][j];
-          if (value2 === 0) continue;
-          const goalCol2 = (value2 - 1) % this.size;
-          if (goalCol2 === j && value1 > value2) {
+      const colTiles: number[] = [];
+      for (let i = 0; i < this.size; i++) {
+        const value = state[i][j];
+        if (value === 0) continue;
+        const goalCol = (value - 1) % this.size;
+        if (goalCol === j) {
+          colTiles.push(value);
+        }
+      }
+      
+      // Count conflicts in this column
+      for (let i = 0; i < colTiles.length - 1; i++) {
+        for (let k = i + 1; k < colTiles.length; k++) {
+          if (colTiles[i] > colTiles[k]) {
             linear_conflicts++;
           }
         }
@@ -241,6 +243,7 @@ export class PuzzleSolver {
   solve(initialState: PuzzleState, algorithm: Algorithm, heuristic: Heuristic): Solution {
     const startTime = performance.now();
     let nodesExplored = 0;
+    let nodesExpanded = 0;
     let maxDepth = 0;
 
     const initialNode = this.createNode(initialState, null, '', heuristic);
@@ -258,6 +261,7 @@ export class PuzzleSolver {
           return {
             path: this.reconstructPath(node),
             nodesExplored,
+            nodesExpanded,
             timeTaken: performance.now() - startTime,
             maxDepth
           };
@@ -288,6 +292,7 @@ export class PuzzleSolver {
           return {
             path: this.reconstructPath(node),
             nodesExplored,
+            nodesExpanded,
             timeTaken: performance.now() - startTime,
             maxDepth
           };
@@ -298,6 +303,7 @@ export class PuzzleSolver {
         visited.add(stateStr);
 
         const moves = this.getPossibleMoves(node.state);
+        nodesExpanded ++;
         for (const move of moves) {
           const moveStr = JSON.stringify(move);
           if (!visited.has(moveStr)) {
@@ -320,10 +326,10 @@ export class PuzzleSolver {
           const fScoreA = fScore.get(JSON.stringify(a.state)) || 0;
           const fScoreB = fScore.get(JSON.stringify(b.state)) || 0;
           if (fScoreA !== fScoreB) return fScoreA - fScoreB;
-          // If fScores are equal, prefer the node with higher gScore (closer to start)
-          const gScoreA = gScore.get(JSON.stringify(a.state)) || 0;
-          const gScoreB = gScore.get(JSON.stringify(b.state)) || 0;
-          return gScoreB - gScoreA;
+          // If fScores are equal, prefer the node with lower hScore (closer to goal)
+          const hScoreA = this.getHeuristic(heuristic, a.state);
+          const hScoreB = this.getHeuristic(heuristic, b.state);
+          return hScoreA - hScoreB;
         });
         
         const node = openSet.shift()!; // this pops an element from the front of the openset
@@ -334,6 +340,7 @@ export class PuzzleSolver {
           return {
             path: this.reconstructPath(node),
             nodesExplored,
+            nodesExpanded,
             timeTaken: performance.now() - startTime,
             maxDepth
           };
@@ -343,21 +350,17 @@ export class PuzzleSolver {
         closedSet.add(stateStr);
 
         const moves = this.getPossibleMoves(node.state);
+        let check = false;
         for (const move of moves) {
           const moveStr = JSON.stringify(move);
           if (closedSet.has(moveStr)) continue;
+          check = true;
 
           const action = this.getAction(node.state, move);
           const tentativeGScore = (gScore.get(stateStr) || 0) + 1;
           const hScore = this.getHeuristic(heuristic, move);
           const tentativeFScore = tentativeGScore + hScore;
           
-          // Only update if we found a better total path (fScore)
-
-          // for example lets say we have a path A->B->C the cost : 10 
-          // later we have found another path A->D->C the cost : 8 
-          // so we update the cost of C and update the parent as well. 
-
           if (!fScore.has(moveStr) || tentativeFScore < (fScore.get(moveStr) || Infinity)) {
             const newNode = this.createNode(move, node, action, heuristic);
             gScore.set(moveStr, tentativeGScore);
@@ -371,6 +374,10 @@ export class PuzzleSolver {
               openSet.push(newNode);
             }
           }
+        }
+
+        if(check) {
+          nodesExpanded++;
         }
       }
     }

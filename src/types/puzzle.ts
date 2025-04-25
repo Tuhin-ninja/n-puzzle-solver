@@ -13,6 +13,7 @@ export interface PuzzleNode {
 
 export interface Solution {
   path: string[];
+  nodesExpanded: number;
   nodesExplored: number;
   timeTaken: number;
   maxDepth: number;

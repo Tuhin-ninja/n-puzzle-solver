@@ -14,13 +14,15 @@ export default function Home() {
   const [isSolving, setIsSolving] = useState<boolean>(false);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [showCustomSize, setShowCustomSize] = useState<boolean>(false); 
+  const [showCustomSize, setShowCustomSize] = useState<boolean>(false);
   const [stats, setStats] = useState<{
     nodesExplored: number;
+    nodesExpanded: number;
     timeTaken: number;
     maxDepth: number;
   }>({
     nodesExplored: 0,
+    nodesExpanded: 0,
     timeTaken: 0,
     maxDepth: 0,
   });
@@ -44,7 +46,7 @@ export default function Home() {
     // const solver = new PuzzleSolver(size);
     const state: PuzzleState = [];
     const numbers = Array.from({ length: size * size }, (_, i) => i);
-    
+
     // Fisher-Yates shuffle
     for (let i = numbers.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -61,7 +63,7 @@ export default function Home() {
     setInitialState(state);
     setCurrentState(state);
     setSolution(null);
-    setStats({ nodesExplored: 0, timeTaken: 0, maxDepth: 0 });
+    setStats({ nodesExplored: 0, nodesExpanded: 0, timeTaken: 0, maxDepth: 0 });
   };
 
   const checkSolvability = (state: PuzzleState) => {
@@ -84,6 +86,7 @@ export default function Home() {
       setSolution(result);
       setStats({
         nodesExplored: result.nodesExplored,
+        nodesExpanded: result.nodesExpanded,
         timeTaken: result.timeTaken,
         maxDepth: result.maxDepth,
       });
@@ -103,18 +106,18 @@ export default function Home() {
 
   const handleTileClick = (row: number, col: number) => {
     if (isSolving) return;
-    
+
     const blankPos = findBlankTile();
     if (!blankPos) return;
 
     const [blankRow, blankCol] = blankPos;
-    const isAdjacent = 
+    const isAdjacent =
       (Math.abs(row - blankRow) === 1 && col === blankCol) ||
       (Math.abs(col - blankCol) === 1 && row === blankRow);
 
     if (isAdjacent) {
       const newState = currentState.map(row => [...row]);
-      [newState[row][col], newState[blankRow][blankCol]] = 
+      [newState[row][col], newState[blankRow][blankCol]] =
         [newState[blankRow][blankCol], newState[row][col]];
       setCurrentState(newState);
     }
@@ -149,7 +152,7 @@ export default function Home() {
       const [blankRow, blankCol] = solver['getBlankPosition'](state);
       const [newRow, newCol] = getNewPosition(blankRow, blankCol, solution.path[i]);
       const newState = state.map(row => [...row]);
-      [newState[blankRow][blankCol], newState[newRow][newCol]] = 
+      [newState[blankRow][blankCol], newState[newRow][newCol]] =
         [newState[newRow][newCol], newState[blankRow][blankCol]];
       state = newState;
     }
@@ -224,7 +227,7 @@ export default function Home() {
       setInitialState(newPuzzle);
       setCurrentState(newPuzzle);
       setSolution(null);
-      setStats({ nodesExplored: 0, timeTaken: 0, maxDepth: 0 });
+      setStats({ nodesExplored: 0, nodesExpanded: 0, timeTaken: 0, maxDepth: 0 });
       setShowCustomInput(false);
       setGridInput([]);
     } catch (error) {
@@ -242,13 +245,13 @@ export default function Home() {
         <h1 className="text-5xl font-bold text-center mb-12 bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
           Tuhins N-Puzzle Solver
         </h1>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Controls */}
           <div className="space-y-6">
             <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100">
               <h2 className="text-2xl font-semibold mb-6 text-gray-800">Controls</h2>
-              
+
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -259,20 +262,19 @@ export default function Home() {
                       <button
                         key={s}
                         onClick={() => handleSizeChange(s)}
-                        className={`flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-all duration-1000 ${
-                          size === s
+                        className={`flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-all duration-1000 ${size === s
                             ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/20'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         {s}x{s}
                       </button>
                     ))}
                     <button className='flex-1 px-6 py-3 rounded-xl text-lg font-medium transition-all duration-1000 bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    onClick={()=> setShowCustomSize(!showCustomSize)}
+                      onClick={() => setShowCustomSize(!showCustomSize)}
                     >
                       Custom
-                      </button>
+                    </button>
                   </div>
                 </div>
 
@@ -285,11 +287,10 @@ export default function Home() {
                       <button
                         key={algo}
                         onClick={() => handleAlgorithmChange(algo)}
-                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-1000 ${
-                          selectedAlgorithm === algo
+                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-1000 ${selectedAlgorithm === algo
                             ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/20'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         {algo.toUpperCase()}
                       </button>
@@ -306,11 +307,10 @@ export default function Home() {
                       <button
                         key={heuristic}
                         onClick={() => handleHeuristicChange(heuristic)}
-                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-1000 ${
-                          selectedHeuristic === heuristic
+                        className={`px-4 py-3 rounded-xl text-sm font-medium transition-all duration-1000 ${selectedHeuristic === heuristic
                             ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white shadow-lg shadow-purple-500/20'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
+                          }`}
                       >
                         {heuristic.toUpperCase()}
                       </button>
@@ -334,11 +334,10 @@ export default function Home() {
                   <button
                     onClick={handleSolve}
                     disabled={isSolving}
-                    className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-1000 ${
-                      isSolving
+                    className={`flex-1 px-6 py-3 rounded-xl font-medium transition-all duration-1000 ${isSolving
                         ? 'bg-gray-300 cursor-not-allowed'
                         : 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg shadow-green-500/20 hover:from-green-700 hover:to-green-800'
-                    }`}
+                      }`}
                   >
                     {isSolving ? 'Solving...' : 'Solve'}
                   </button>
@@ -355,6 +354,10 @@ export default function Home() {
                     <p className="text-sm text-gray-600">Nodes Explored</p>
                     <p className="text-2xl font-bold text-blue-600">{stats.nodesExplored}</p>
                   </div>
+                  <div className="bg-blue-50 p-4 rounded-xl">
+                    <p className="text-sm text-gray-600">Nodes Expanded</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats.nodesExpanded}</p>
+                  </div>
                   <div className="bg-purple-50 p-4 rounded-xl">
                     <p className="text-sm text-gray-600">Time Taken</p>
                     <p className="text-2xl font-bold text-purple-600">{stats.timeTaken.toFixed(2)}ms</p>
@@ -366,12 +369,32 @@ export default function Home() {
                 </div>
               </div>
             )}
+
+            {/* {stats.nodesExpanded > 0 && (
+              <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100">
+                <h2 className="text-2xl font-semibold mb-6 text-gray-800">Statistics</h2>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-blue-50 p-4 rounded-xl">
+                    <p className="text-sm text-gray-600">Nodes Expanded</p>
+                    <p className="text-2xl font-bold text-blue-600">{stats.nodesExpanded}</p>
+                  </div>
+                  <div className="bg-purple-50 p-4 rounded-xl">
+                    <p className="text-sm text-gray-600">Time Taken</p>
+                    <p className="text-2xl font-bold text-purple-600">{stats.timeTaken.toFixed(2)}ms</p>
+                  </div>
+                  <div className="bg-green-50 p-4 rounded-xl">
+                    <p className="text-sm text-gray-600">Minimum Moves</p>
+                    <p className="text-2xl font-bold text-green-600">{stats.maxDepth}</p>
+                  </div>
+                </div>
+              </div>
+            )} */}
           </div>
 
           {/* Puzzle Board */}
           <div className="bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-gray-100">
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Puzzle Board</h2>
-            <div className="grid gap-2 p-4 bg-gray-50 rounded-xl" style={{ 
+            <div className="grid gap-2 p-4 bg-gray-50 rounded-xl" style={{
               gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
               aspectRatio: '1/1'
             }}>
@@ -381,8 +404,8 @@ export default function Home() {
                     key={`${i}-${j}`}
                     onClick={() => handleTileClick(i, j)}
                     className={`aspect-square flex items-center justify-center text-3xl font-bold rounded-xl transition-all duration-1000
-                      ${value === 0 
-                        ? 'bg-gray-200' 
+                      ${value === 0
+                        ? 'bg-gray-200'
                         : 'bg-gradient-to-br from-blue-100 to-blue-50 text-blue-800 hover:from-blue-200 hover:to-blue-100 shadow-sm'
                       }
                       ${isSolving ? 'cursor-not-allowed' : 'cursor-pointer hover:shadow-md'}`}
@@ -404,18 +427,17 @@ export default function Home() {
               {solution.path.map((move, index) => (
                 <span
                   key={index}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all duration-1000 ${
-                    index === currentStep
+                  className={`px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all duration-1000 ${index === currentStep
                       ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/20'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                   onClick={() => handleStepChange(index)}
                 >
                   {move}
                 </span>
               ))}
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => handleStepChange(0)}
@@ -492,7 +514,7 @@ export default function Home() {
                 )}
 
                 <div className="bg-white/50 p-4 rounded-xl border border-gray-200">
-                  <div className="grid gap-2" style={{ 
+                  <div className="grid gap-2" style={{
                     gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
                     aspectRatio: '1/1'
                   }}>
