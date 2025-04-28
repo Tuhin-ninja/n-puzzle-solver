@@ -333,7 +333,7 @@ export class PuzzleSolver {
         });
         
         const node = openSet.shift()!; // this pops an element from the front of the openset
-        nodesExplored++;
+        nodesExpanded++;
         maxDepth = Math.max(maxDepth, node.depth);
 
         if (this.isGoalState(node.state)) {
@@ -346,16 +346,18 @@ export class PuzzleSolver {
           };
         }
 
-        const stateStr = JSON.stringify(node.state);
-        closedSet.add(stateStr);
 
+        const stateStr = JSON.stringify(node.state);
         const moves = this.getPossibleMoves(node.state);
         let check = false;
         for (const move of moves) {
           const moveStr = JSON.stringify(move);
           if (closedSet.has(moveStr)) continue;
-          check = true;
-
+          if(!check){
+            closedSet.add(stateStr);
+            // nodesExpanded++;
+            check = true;
+          }
           const action = this.getAction(node.state, move);
           const tentativeGScore = (gScore.get(stateStr) || 0) + 1;
           const hScore = this.getHeuristic(heuristic, move);
@@ -372,13 +374,12 @@ export class PuzzleSolver {
               openSet[existingNodeIndex] = newNode;
             } else {
               openSet.push(newNode);
+              nodesExplored++;
             }
           }
         }
 
-        if(check) {
-          nodesExpanded++;
-        }
+
       }
     }
 
