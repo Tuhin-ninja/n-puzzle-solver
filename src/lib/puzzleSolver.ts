@@ -242,8 +242,8 @@ export class PuzzleSolver {
 
   solve(initialState: PuzzleState, algorithm: Algorithm, heuristic: Heuristic): Solution {
     const startTime = performance.now();
-    let nodesExplored = 0;
-    let nodesExpanded = 1;
+    let nodesExplored = 1;
+    let nodesExpanded = 0;
     let maxDepth = 0;
 
     const initialNode = this.createNode(initialState, null, '', heuristic);
