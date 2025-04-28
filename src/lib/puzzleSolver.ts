@@ -243,7 +243,7 @@ export class PuzzleSolver {
   solve(initialState: PuzzleState, algorithm: Algorithm, heuristic: Heuristic): Solution {
     const startTime = performance.now();
     let nodesExplored = 0;
-    let nodesExpanded = 0;
+    let nodesExpanded = 1;
     let maxDepth = 0;
 
     const initialNode = this.createNode(initialState, null, '', heuristic);
@@ -333,7 +333,6 @@ export class PuzzleSolver {
         });
         
         const node = openSet.shift()!; // this pops an element from the front of the openset
-        nodesExpanded++;
         maxDepth = Math.max(maxDepth, node.depth);
 
         if (this.isGoalState(node.state)) {
@@ -345,6 +344,8 @@ export class PuzzleSolver {
             maxDepth
           };
         }
+
+        nodesExpanded++;
 
 
         const stateStr = JSON.stringify(node.state);
